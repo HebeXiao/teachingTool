@@ -1,40 +1,45 @@
-# 配置网关
+# 配置网关 Port:3000
 spring:
   cloud:
     gateway:
       routes:
-        # user service
+        # user service Port:3001
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/user/**  # 访问user路径转发用户服务
-        # product service
-        - id: product-service # 此名称随意定义
-          uri: lb://product-service #使用负载均衡,调用服务名,这是服务名
+            - Path=/user/**
+        # static service Port:3002
+        - id: static-service
+          uri: lb://static-service
           predicates:
-            - Path=/product/** # 访问product相关,转发到product服务
-        # carousel service
-        - id: carousel-service  # 轮播图服务
-          uri: lb://carousel-service #静态资源处理以及oss上传服务!
+            - Path=/public/**
+        # carousel service Port:3003
+        - id: carousel-service
+          uri: lb://carousel-service
           predicates:
             - Path=/carousel/**
-        # cart service
-        - id: cart-service  # 购物车服务
+        # product service Port:3004
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/product/**
+        # cart service Port:3009
+        - id: cart-service
           uri: lb://cart-service
           predicates:
             - Path=/cart/**
-        # order service
-        - id: order-service  # 订单服务
+        # order service Port:3010
+        - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/order/**
-        # challenge service
-        - id: challenge-service  # 挑战服务
+        # challenge service:3012
+        - id: challenge-service
           uri: lb://challenge-service
           predicates:
             - Path=/challenge/**
-        # websocket service
-        - id: websocket-service  # websocket服务
+        # websocket service Port:3013
+        - id: websocket-service
           uri: lb://websocket-service
           predicates:
             - Path=/notify/**
