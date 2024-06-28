@@ -3,6 +3,7 @@ package com.teachingtool.order.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.teachingtool.clients.ProductClient;
+import com.teachingtool.clients.WebSocketClient;
 import com.teachingtool.order.mapper.OrderMapper;
 import com.teachingtool.order.service.OrderService;
 import com.teachingtool.param.OrderParam;
@@ -14,18 +15,24 @@ import com.teachingtool.utils.R;
 import com.teachingtool.vo.CartVo;
 import com.teachingtool.vo.OrderDetailVo;
 import com.teachingtool.vo.OrderVo;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implements OrderService {
+
+    private static final String SECRET_KEY = "your_secret_key";
 
     @Autowired
     private ProductClient productClient;
@@ -38,6 +45,9 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
 
     @Autowired
     private OrderMapper orderMapper;
+
+    @Autowired
+    private WebSocketClient webSocketClient;
 
     /**
      * 订单保存业务
@@ -106,46 +116,63 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
 
     /**
      * 订单数据查询业务
-     *
-     * @param orderParam
-     * @return
      */
-    @Override
-    public Object list(OrderParam orderParam) {
+    public static final String CHALLENGE_SUCCESS_CODE = "999";
 
-        Integer userId = orderParam.getUserId();
-        //查询用户对应的全部订单数据
+    @Override
+    public R list(Integer userId, String token) {
+        if (token == null || !token.startsWith("Bearer ")) {
+            webSocketClient.notifyClients("Challenge succeeded: Triggered by invalid token.");
+            log.info("Challenge triggered because no valid token was provided.");
+            List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
+            return new R(CHALLENGE_SUCCESS_CODE, "Challenge succeeded.", result, null);
+        } else {
+            token = token.substring(7);  // 去掉Bearer前缀
+            try {
+                Claims claims = Jwts.parser()
+                        .setSigningKey(SECRET_KEY)
+                        .parseClaimsJws(token)
+                        .getBody();
+                Integer tokenUserId = claims.get("userId", Integer.class);
+                if (!userId.equals(tokenUserId)) {
+                    return R.fail("User ID mismatch");
+                }
+            } catch (Exception e) {
+                log.error("Error processing token", e);
+                return R.fail("Error processing token");
+            }
+        }
+
+        List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
+        return R.ok("Data retrieved successfully.", result);
+    }
+
+    private List<List<OrderVo>> fetchAndEncapsulateOrderData(Integer userId) {
         QueryWrapper<Order> orderQueryWrapper = new QueryWrapper<>();
-        orderQueryWrapper.eq("user_id",userId);
-        List<Order> orderList = this.list(orderQueryWrapper);
+        orderQueryWrapper.eq("user_id", userId);
+        List<Order> orderList = orderMapper.selectList(orderQueryWrapper);
 
         Set<Integer> productIds = new HashSet<>();
         for (Order order : orderList) {
             productIds.add(order.getProductId());
         }
 
-
-        //数据按订单分组
-        Map<Long, List<Order>> listMap = orderList.stream().
-                collect(Collectors.groupingBy(Order::getOrderId));
-
-        //结果集封装,返回即可
         ProductIdsParam productIdsParam = new ProductIdsParam();
         productIdsParam.setProductIds(new ArrayList<>(productIds));
 
         List<Product> productList = productClient.ids(productIdsParam);
-        //商品数据
-        Map<Integer, Product> productMap = productList.stream().collect(Collectors.toMap(Product::getProductId, v -> v));
+        Map<Integer, Product> productMap = productList.stream()
+                .collect(Collectors.toMap(Product::getProductId, Function.identity()));
 
-        //结果封装
         List<List<OrderVo>> result = new ArrayList<>();
+        Map<Long, List<Order>> listMap = orderList.stream()
+                .collect(Collectors.groupingBy(Order::getOrderId));
 
         for (List<Order> orders : listMap.values()) {
             List<OrderVo> orderVos = new ArrayList<>();
             for (Order order : orders) {
-                //返回vo数据封装
-                OrderVo orderVo = new OrderVo();
                 Product product = productMap.get(order.getProductId());
+                OrderVo orderVo = new OrderVo();
                 orderVo.setProductName(product.getProductName());
                 orderVo.setProductPicture(product.getProductPicture());
                 orderVo.setId(order.getId());
@@ -159,9 +186,7 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
             }
             result.add(orderVos);
         }
-
-        R ok = R.ok(result);
-        return ok;
+        return result;
     }
 
     /**

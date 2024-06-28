@@ -3,7 +3,9 @@ package com.teachingtool.challenge.controller;
 import com.teachingtool.param.ChallengeParam;
 import com.teachingtool.pojo.Challenge;
 import com.teachingtool.challenge.service.ChallengeService;
+import com.teachingtool.pojo.ChallengeStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,5 +36,15 @@ public class ChallengeController {
     public Object detail(@RequestBody Map<String,Integer> param){
         Integer challengeID = param.get("challengeID");
         return challengeService.detail(challengeID);
+    }
+
+    @PostMapping("add")
+    public ResponseEntity<?> addChallengeStatus(@RequestBody ChallengeStatus challengeStatus) {
+        try {
+            challengeService.addChallengeStatus(challengeStatus);
+            return ResponseEntity.ok("Challenge status added successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error adding challenge status");
+        }
     }
 }

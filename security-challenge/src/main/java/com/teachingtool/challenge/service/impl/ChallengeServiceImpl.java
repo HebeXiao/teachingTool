@@ -1,10 +1,12 @@
 package com.teachingtool.challenge.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.teachingtool.challenge.mapper.ChallengeMapper;
 import com.teachingtool.challenge.mapper.ChallengeStatusMapper;
 import com.teachingtool.param.ChallengeParam;
 import com.teachingtool.pojo.Challenge;
 import com.teachingtool.challenge.service.ChallengeService;
+import com.teachingtool.pojo.ChallengeStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -42,5 +44,21 @@ public class ChallengeServiceImpl implements ChallengeService {
     public Object detail(Integer challengeID) {
         Challenge challenge = challengeMapper.selectDetailsById(challengeID);
         return challenge;
+    }
+
+    @Override
+    public void addChallengeStatus(ChallengeStatus challengeStatus) {
+        QueryWrapper<ChallengeStatus> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", challengeStatus.getUserId())
+                .eq("challenge_id", challengeStatus.getChallengeId());
+
+        ChallengeStatus existingStatus = challengeStatusMapper.selectOne(queryWrapper);
+
+        if (existingStatus == null) {
+            challengeStatusMapper.insert(challengeStatus);
+        } else {
+            // Optionally, update the existing record if needed
+            log.info("Data alreadly exist");
+        }
     }
 }

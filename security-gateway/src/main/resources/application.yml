@@ -33,3 +33,8 @@ spring:
           uri: lb://challenge-service
           predicates:
             - Path=/challenge/**
+        # websocket service
+        - id: websocket-service  # websocket服务
+          uri: lb://websocket-service
+          predicates:
+            - Path=/notify/**

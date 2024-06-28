@@ -16,6 +16,7 @@
         <module>store-cart</module>
         <module>store-carousel</module>
         <module>security-user</module>
+        <module>security-websocket</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -84,6 +85,12 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>druid-spring-boot-starter</artifactId>
                 <version>${druid.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt</artifactId>
+                <version>0.9.1</version>
             </dependency>
 
         </dependencies>

@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: websocket-service
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+server:
+  port: 3013

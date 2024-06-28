@@ -11,15 +11,23 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.teachingtool.user.constants.UserConstants;
 import com.teachingtool.user.mapper.UserMapper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final String SECRET_KEY = "your_secret_key";
+    private static final long EXPIRATION_TIME = 86400000; // 1 day in milliseconds
 
     @Autowired
     private UserMapper userMapper;
@@ -103,38 +111,50 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public R login(User user) {
-
-        //1.参数校验
-        //1.参数校验
-        if (StringUtils.isEmpty(user.getUserName()) || StringUtils.isEmpty(user.getPassword()))
-        {
-            log.info("UserServiceImpl.login业务结束，结果:{}",user);
+        if (StringUtils.isEmpty(user.getUserName()) || StringUtils.isEmpty(user.getPassword())) {
+            log.info("UserServiceImpl.login业务结束，结果:{}", user);
             return R.fail("Username or password is null, login failed!");
         }
 
-        //2.数据库查询
-        //代码加密处理,注意加盐,生成常量
         String newPwd = MD5Util.encode(user.getPassword() + UserConstants.USER_SLAT);
         user.setPassword(newPwd);
 
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_name",user.getUserName());
-        queryWrapper.eq("password",user.getPassword());
+        queryWrapper.eq("user_name", user.getUserName());
+        queryWrapper.eq("password", user.getPassword());
 
         User loginUser = userMapper.selectOne(queryWrapper);
 
-        //3.结果封装
-
         if (loginUser == null) {
-            log.info("UserServiceImpl.login业务结束，登录失败,结果:{}",loginUser);
+            log.info("UserServiceImpl.login业务结束，登录失败,结果:{}", loginUser);
             return R.fail("Wrong username or password, login failed!");
         }
 
-        //设置为null,配合NoN_NULL注解,不返回给前端
+        // 生成JWT token
+        String token = generateToken(loginUser);
+
+        // 设置为null,配合NoN_NULL注解,不返回给前端
         loginUser.setPassword(null);
-        //注意修改 user的别名
-        log.info("UserServiceImpl.login业务结束，登录成功,结果:{}",loginUser);
-        return R.ok("Login Successful!",loginUser);
+
+        // 将 token 和 user 信息放入 Map 中
+        Map<String, Object> resultData = new HashMap<>();
+        resultData.put("token", token);
+        resultData.put("user", loginUser);
+
+        log.info("UserServiceImpl.login业务结束，登录成功,结果:{}", loginUser);
+        return R.ok("Login Successful!", resultData);
     }
 
+    private String generateToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userName", user.getUserName());
+        claims.put("userId", user.getUserId());
+        return Jwts.builder()
+                .setSubject(String.valueOf(user.getUserId()))
+                .setClaims(claims)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(SignatureAlgorithm.HS512, SECRET_KEY)
+                .compact();
+    }
 }

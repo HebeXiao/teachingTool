@@ -121,4 +121,5 @@ public class R  implements Serializable {
 
         return fail(USER_NO_LOGIN,"用户未登录!");
     }
+
 }
