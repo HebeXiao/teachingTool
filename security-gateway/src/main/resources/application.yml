@@ -8,37 +8,27 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/user/**
-        # static service Port:3002
-        - id: static-service
-          uri: lb://static-service
-          predicates:
-            - Path=/public/**
-        # carousel service Port:3003
-        - id: carousel-service
-          uri: lb://carousel-service
-          predicates:
-            - Path=/carousel/**
-        # product service Port:3004
+        # product service Port:3002
         - id: product-service
           uri: lb://product-service
           predicates:
             - Path=/product/**
-        # cart service Port:3009
+        # cart service Port:3003
         - id: cart-service
           uri: lb://cart-service
           predicates:
             - Path=/cart/**
-        # order service Port:3010
+        # order service Port:3004
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/order/**
-        # challenge service:3012
+        # challenge service:3005
         - id: challenge-service
           uri: lb://challenge-service
           predicates:
             - Path=/challenge/**
-        # websocket service Port:3013
+        # websocket service Port:3006
         - id: websocket-service
           uri: lb://websocket-service
           predicates:

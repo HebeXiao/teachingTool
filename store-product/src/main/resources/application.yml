@@ -1,4 +1,8 @@
 spring:
+  resources:
+    static-locations: classpath:/product/
+  mvc:
+    static-path-pattern: /product/**
   # 连接池配置
   datasource:
     url: jdbc:mysql://localhost:3306/store_product?useSSL=false&useUnicode=true&characterEncoding=UTF-8
