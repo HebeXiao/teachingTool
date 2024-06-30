@@ -2,6 +2,8 @@ package com.teachingtool.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teachingtool.clients.ProductClient;
 import com.teachingtool.clients.WebSocketClient;
 import com.teachingtool.order.mapper.OrderMapper;
@@ -121,13 +123,27 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
 
     @Override
     public R list(Integer userId, String token) {
+        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
+        log.info("userID: {}", userId);
+        log.info("token: {}", token);
         if (token == null || !token.startsWith("Bearer ")) {
-            webSocketClient.notifyClients("Challenge succeeded: Triggered by invalid token.");
+            String messageJson = "";
+            try {
+                // 创建包含 userID 和消息的 JSON 字符串
+                messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                    put("userID", userId);
+                    put("message", "Challenge succeeded: Triggered by invalid token.");
+                }});
+                log.info(messageJson);
+            } catch (JsonProcessingException e) {
+                log.error("Error creating JSON message", e);
+            }
+            webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
             log.info("Challenge triggered because no valid token was provided.");
             List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
             return new R(CHALLENGE_SUCCESS_CODE, "Challenge succeeded.", result, null);
         } else {
-            token = token.substring(7);  // 去掉Bearer前缀
+            token = token.substring(7); // 去掉Bearer前缀
             try {
                 Claims claims = Jwts.parser()
                         .setSigningKey(SECRET_KEY)
