@@ -18,6 +18,8 @@ import com.teachingtool.vo.CartVo;
 import com.teachingtool.vo.OrderDetailVo;
 import com.teachingtool.vo.OrderVo;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -124,24 +126,10 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
     @Override
     public R list(Integer userId, String token) {
         ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
-        log.info("userID: {}", userId);
-        log.info("token: {}", token);
+
+        // Token验证
         if (token == null || !token.startsWith("Bearer ")) {
-            String messageJson = "";
-            try {
-                // 创建包含 userID 和消息的 JSON 字符串
-                messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
-                    put("userID", userId);
-                    put("message", "Challenge succeeded: Triggered by invalid token.");
-                }});
-                log.info(messageJson);
-            } catch (JsonProcessingException e) {
-                log.error("Error creating JSON message", e);
-            }
-            webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
-            log.info("Challenge triggered because no valid token was provided.");
-            List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
-            return new R(CHALLENGE_SUCCESS_CODE, "Challenge succeeded.", result, null);
+            return R.fail("Token is invalid");
         } else {
             token = token.substring(7); // 去掉Bearer前缀
             try {
@@ -149,19 +137,46 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
                         .setSigningKey(SECRET_KEY)
                         .parseClaimsJws(token)
                         .getBody();
+
+                // 检查Token是否已过期
+                Date expiration = claims.getExpiration();
+                if (expiration.before(new Date())) {
+                    return R.fail("Token has expired");
+                }
+
                 Integer tokenUserId = claims.get("userId", Integer.class);
                 if (!userId.equals(tokenUserId)) {
-                    return R.fail("User ID mismatch");
+                    // 触发挑战成功逻辑
+                    String messageJson = "";
+                    try {
+                        // 创建包含 userID 和消息的 JSON 字符串
+                        messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                            put("userID", userId);
+                            put("message", "Challenge succeeded: Triggered by user ID mismatch.");
+                        }});
+                        log.info(messageJson);
+                    } catch (JsonProcessingException e) {
+                        log.error("Error creating JSON message", e);
+                    }
+                    webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+                    log.info("Challenge triggered because user ID mismatch.");
+                    List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
+                    return new R(CHALLENGE_SUCCESS_CODE, "Challenge succeeded.", result, null);
                 }
-            } catch (Exception e) {
+            } catch (ExpiredJwtException e) {
+                log.error("Token has expired", e);
+                return R.fail("Token has expired");
+            } catch (JwtException e) {
                 log.error("Error processing token", e);
-                return R.fail("Error processing token");
+                return R.fail("Token is invalid");
             }
         }
 
+        // 如果Token合法且userId匹配，返回数据列表
         List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
         return R.ok("Data retrieved successfully.", result);
     }
+
 
     private List<List<OrderVo>> fetchAndEncapsulateOrderData(Integer userId) {
         QueryWrapper<Order> orderQueryWrapper = new QueryWrapper<>();
