@@ -1,6 +1,9 @@
 package com.teachingtool.user.service.impl;
 
 import com.alibaba.druid.util.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teachingtool.clients.WebSocketClient;
 import com.teachingtool.param.PageParam;
 import com.teachingtool.pojo.User;
 import com.teachingtool.user.service.UserService;
@@ -16,6 +19,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -31,6 +35,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private WebSocketClient webSocketClient;
 
     /**
      * 检查账号是否可用
@@ -92,6 +99,7 @@ public class UserServiceImpl implements UserService {
         String newPwd = MD5Util.encode(user.getPassword() + UserConstants.USER_SLAT);
 
         user.setPassword(newPwd);
+        user.setMembership(false);
 
         int rows = userMapper.insert(user);
         //4.结果处理
@@ -156,5 +164,85 @@ public class UserServiceImpl implements UserService {
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(SignatureAlgorithm.HS512, SECRET_KEY)
                 .compact();
+    }
+
+    @Override
+    public User getUserById(Integer userId) {
+        return userMapper.selectById(userId);
+    }
+
+    @Override
+    @Transactional
+    public boolean updateUserInfo(Map<String, Object> userInfo) {
+        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
+        Integer userId = (Integer) userInfo.get("user_id");
+        String userPhonenumber = (String) userInfo.get("user_phonenumber");
+        String linkman = (String) userInfo.get("linkman");
+        String address = (String) userInfo.get("address");
+        Boolean membership = (Boolean) userInfo.get("membership"); // 故意允许修改membership字段
+
+        User user = userMapper.selectById(userId);
+        if (user != null) {
+            user.setUserPhonenumber(userPhonenumber);
+            user.setLinkman(linkman);
+            user.setAddress(address);
+            if (membership != null) {
+                user.setMembership(membership); // 故意允许更新会员属性
+                log.info("Member attributes have been modified by unauthorized persons");
+                // Create JSON message
+                String messageJson = "";
+                try {
+                    // 创建包含 userID 和消息的 JSON 字符串
+                    messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                        put("userID", userId);
+                        put("message", "Challenge succeeded: Triggered by unauthorized modification.");
+                    }});
+                    log.info("Sending WebSocket notification due to unauthorized modification.");
+                    webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+                } catch (JsonProcessingException e) {
+                    log.error("Error creating JSON message for unauthorized modification", e);
+                }
+            }
+            int updatedRows = userMapper.updateById(user);
+            return updatedRows > 0;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public Map<String, Object> getUserAddress(Map<String, Integer> request) {
+        Integer userId = request.get("user_id");
+        User address = userMapper.selectById(userId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", address);
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> saveUserAddress(Map<String, Object> userInfo) {
+        Integer userId = (Integer) userInfo.get("user_id");
+        Map<String, String> addressInfo = (Map<String, String>) userInfo.get("address");
+
+        User user = userMapper.selectById(userId);
+        if (user != null) {
+            user.setLinkman(addressInfo.get("linkman"));
+            user.setUserPhonenumber(addressInfo.get("userPhonenumber"));
+            log.info(addressInfo.get("userPhonenumber"));
+            user.setAddress(addressInfo.get("address"));
+            userMapper.updateById(user);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", "001");
+            response.put("msg", "Address updated successfully");
+            response.put("data", addressInfo);
+            return response;
+        } else {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", "002");
+            response.put("msg", "Address update failure");
+            return response;
+        }
     }
 }

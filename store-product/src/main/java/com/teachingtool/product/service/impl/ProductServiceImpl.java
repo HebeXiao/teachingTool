@@ -13,7 +13,6 @@ import com.teachingtool.product.param.ProductParamInteger;
 import com.teachingtool.product.service.ProductService;
 import com.teachingtool.utils.R;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;

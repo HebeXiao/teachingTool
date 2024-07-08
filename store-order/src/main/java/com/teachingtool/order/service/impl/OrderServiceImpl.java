@@ -114,7 +114,7 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
          */
         rabbitTemplate.convertAndSend("topic.ex","clear.cart",cartIds);
 
-        R ok = R.ok("订单生成成功!");
+        R ok = R.ok("Order Generated Successfully!");
         return ok;
     }
 
@@ -126,9 +126,24 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
     @Override
     public R list(Integer userId, String token) {
         ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
-
+        log.info("token: {}", token);
         // Token验证
-        if (token == null || !token.startsWith("Bearer ")) {
+        if (token == null || token.isEmpty()) {
+            // 触发 WebSocket 逻辑，因为 token 为空
+            String messageJson = "";
+            try {
+                // 创建包含 userID 和消息的 JSON 字符串
+                messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                    put("userID", userId);
+                    put("message", "Challenge succeeded: Triggered by empty token.");
+                }});
+                log.info("Sending WebSocket notification due to empty token.");
+                webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+            } catch (JsonProcessingException e) {
+                log.error("Error creating JSON message for empty token", e);
+            }
+            return R.fail("Token is empty.");
+        } else if (!token.startsWith("Bearer ")) {
             return R.fail("Token is invalid");
         } else {
             token = token.substring(7); // 去掉Bearer前缀
@@ -176,6 +191,7 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
         List<List<OrderVo>> result = fetchAndEncapsulateOrderData(userId);
         return R.ok("Data retrieved successfully.", result);
     }
+
 
 
     private List<List<OrderVo>> fetchAndEncapsulateOrderData(Integer userId) {
@@ -238,10 +254,10 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
 
         if (total == 0){
 
-            return R.ok("订单中不存在要删除的商品!");
+            return R.ok("The item to be deleted does not exist in the order!");
         }
 
-        return R.fail("订单中存在要删除的商品,删除失败!");
+        return R.fail("There is a product in the order to be deleted, and the deletion failed!");
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.teachingtool.pojo.User;
 import com.teachingtool.utils.R;
 
 import java.util.List;
+import java.util.Map;
 
 public interface UserService{
 
@@ -30,4 +31,11 @@ public interface UserService{
      */
     R login(User user);
 
+    User getUserById(Integer userId);
+
+    boolean updateUserInfo(Map<String, Object> userInfo);
+
+    Map<String, Object> getUserAddress(Map<String, Integer> request);
+
+    Map<String, Object> saveUserAddress(Map<String, Object> request);
 }

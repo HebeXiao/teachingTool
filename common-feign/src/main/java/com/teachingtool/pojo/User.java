@@ -23,5 +23,11 @@ public class User implements Serializable {
     private String  password;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String  userPhonenumber;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String linkman;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String address;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private boolean membership;
 }
 
