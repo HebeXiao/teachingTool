@@ -9,7 +9,6 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @MapperScan(basePackages = "com.teachingtool.user.mapper")
 @SpringBootApplication
-//开启feign的客户端,暂时不需要
 @EnableFeignClients(clients = {WebSocketClient.class})
 public class UserApplication {
 

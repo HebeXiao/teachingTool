@@ -3,6 +3,7 @@ package com.teachingtool.user.service;
 import com.teachingtool.param.PageParam;
 import com.teachingtool.pojo.User;
 import com.teachingtool.utils.R;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,8 @@ public interface UserService{
 
     User getUserById(Integer userId);
 
-    boolean updateUserInfo(Map<String, Object> userInfo);
+    @Transactional
+    User updateUserInfo(Map<String, Object> userInfo);
 
     Map<String, Object> getUserAddress(Map<String, Integer> request);
 

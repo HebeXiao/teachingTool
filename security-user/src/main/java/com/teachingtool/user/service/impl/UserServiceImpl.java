@@ -4,14 +4,11 @@ import com.alibaba.druid.util.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teachingtool.clients.WebSocketClient;
-import com.teachingtool.param.PageParam;
 import com.teachingtool.pojo.User;
 import com.teachingtool.user.service.UserService;
 import com.teachingtool.utils.MD5Util;
 import com.teachingtool.utils.R;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.teachingtool.user.constants.UserConstants;
 import com.teachingtool.user.mapper.UserMapper;
 import io.jsonwebtoken.Jwts;
@@ -23,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -173,42 +169,86 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public boolean updateUserInfo(Map<String, Object> userInfo) {
-        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
+    public User updateUserInfo(Map<String, Object> userInfo) {
+        ObjectMapper mapper = new ObjectMapper();
         Integer userId = (Integer) userInfo.get("user_id");
-        String userPhonenumber = (String) userInfo.get("user_phonenumber");
-        String linkman = (String) userInfo.get("linkman");
-        String address = (String) userInfo.get("address");
-        Boolean membership = (Boolean) userInfo.get("membership"); // 故意允许修改membership字段
-
         User user = userMapper.selectById(userId);
-        if (user != null) {
-            user.setUserPhonenumber(userPhonenumber);
-            user.setLinkman(linkman);
-            user.setAddress(address);
-            if (membership != null) {
-                user.setMembership(membership); // 故意允许更新会员属性
-                log.info("Member attributes have been modified by unauthorized persons");
-                // Create JSON message
+        if (user == null) {
+            return null;
+        }
+
+        String newPhoneNumber = (String) userInfo.get("user_phonenumber");
+        String newLinkman = (String) userInfo.get("linkman");
+        String newAddress = (String) userInfo.get("address");
+        Object membershipObj = userInfo.get("membership");
+
+        Boolean newMembership = null;
+        if (membershipObj != null) {
+            if (membershipObj instanceof Boolean) {
+                newMembership = (Boolean) membershipObj;
+            } else {
+                // 触发WebSocket，提示类型有问题
                 String messageJson = "";
                 try {
-                    // 创建包含 userID 和消息的 JSON 字符串
                     messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
                         put("userID", userId);
-                        put("message", "Challenge succeeded: Triggered by unauthorized modification.");
+                        put("message", "Challenge succeeded: Triggered by invalid membership type.");
                     }});
-                    log.info("Sending WebSocket notification due to unauthorized modification.");
-                    webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+                    log.info("Sending WebSocket notification due to invalid membership type.");
+                    webSocketClient.notifyClients(messageJson);
                 } catch (JsonProcessingException e) {
-                    log.error("Error creating JSON message for unauthorized modification", e);
+                    log.error("Error creating JSON message for WebSocket notification", e);
                 }
+                return null;
             }
-            int updatedRows = userMapper.updateById(user);
-            return updatedRows > 0;
-        } else {
-            return false;
         }
+
+        boolean isUpdated = false;  // 标志是否有更新发生
+
+        if (newPhoneNumber != null && !newPhoneNumber.equals(user.getUserPhonenumber())) {
+            user.setUserPhonenumber(newPhoneNumber);
+            isUpdated = true;
+        }
+        if (newLinkman != null && !newLinkman.equals(user.getLinkman())) {
+            user.setLinkman(newLinkman);
+            isUpdated = true;
+        }
+        if (newAddress != null && !newAddress.equals(user.getAddress())) {
+            user.setAddress(newAddress);
+            isUpdated = true;
+        }
+        if (newMembership != null) {
+            user.setMembership(newMembership);
+            log.info("Member attributes have been modified by unauthorized persons");
+            String messageJson = "";
+            try {
+                messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                    put("userID", userId);
+                    put("message", "Challenge succeeded: Triggered by unauthorized modification.");
+                }});
+                log.info("Sending WebSocket notification due to unauthorized modification.");
+                webSocketClient.notifyClients(messageJson);
+            } catch (JsonProcessingException e) {
+                log.error("Error creating JSON message for WebSocket notification", e);
+            }
+            isUpdated = true;
+        }
+
+        if (isUpdated) {
+            int updatedRows = userMapper.updateById(user);
+            if (updatedRows > 0) {
+                // 在返回之前清除密码字段
+                user.setPassword(null);
+                return user;
+            }
+        }
+
+        return null;
     }
+
+
+
+
 
     @Override
     public Map<String, Object> getUserAddress(Map<String, Integer> request) {

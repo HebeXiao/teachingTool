@@ -52,10 +52,10 @@ public class UserController {
     }
 
     @PostMapping("/update")
-    public ResponseEntity<String> updateUserInfo(@RequestBody Map<String, Object> request) {
-        boolean isUpdated = userService.updateUserInfo(request);
-        if (isUpdated) {
-            return ResponseEntity.ok("User information updated successfully");
+    public ResponseEntity<Object> updateUserInfo(@RequestBody Map<String, Object> request) {
+        User updatedUser = userService.updateUserInfo(request);
+        if (updatedUser != null) {
+            return ResponseEntity.ok(updatedUser);  // 返回更新后的用户信息
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }

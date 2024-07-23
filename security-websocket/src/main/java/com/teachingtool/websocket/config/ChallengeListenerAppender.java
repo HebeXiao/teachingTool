@@ -2,10 +2,14 @@ package com.teachingtool.websocket.config;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import java.util.HashMap;
 
 public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
     @Override
     protected void append(ILoggingEvent eventObject) {
+        String exceptionMessage = (eventObject.getThrowableProxy() != null) ? eventObject.getThrowableProxy().getMessage() : "";
         String message = eventObject.getFormattedMessage();
         // 监听因 token 为空触发的挑战
         if (message.contains("Sending WebSocket notification due to empty token.")) {
@@ -19,20 +23,25 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
         if (message.contains("Member attributes have been modified by unauthorized persons")) {
             handleUnauthorizedModificationChallenge();
         }
+        // 监听因无效的 membership 类型触发的挑战
+        if (message.contains("Sending WebSocket notification due to invalid membership type.")) {
+            handleInvalidMembershipTypeChallenge();
+        }
     }
 
     private void handleInvalidTokenChallenge() {
-        System.out.println("Challenge succeeded: Triggered by invalid token.");
         ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by invalid token.");
     }
 
     private void handleEmptyTokenChallenge() {
-        System.out.println("Challenge succeeded: Triggered by empty token.");
         ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by empty token.");
     }
 
     private void handleUnauthorizedModificationChallenge() {
-        System.out.println("Challenge succeeded: Triggered by unauthorized modification.");
         ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by unauthorized modification.");
+    }
+
+    private void handleInvalidMembershipTypeChallenge() {
+        ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by invalid membership type.");
     }
 }
