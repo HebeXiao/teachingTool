@@ -21,6 +21,8 @@ public interface CartService  extends IService<Cart> {
      */
     R list(CartParam cartParam);
 
+    R listById(Integer userId, String token);
+
     /**
      * 修改购物车数量
      * @param cartParam

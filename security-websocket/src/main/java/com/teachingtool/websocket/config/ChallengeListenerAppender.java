@@ -2,9 +2,6 @@ package com.teachingtool.websocket.config;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import java.util.HashMap;
 
 public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
     @Override
@@ -27,6 +24,10 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
         if (message.contains("Sending WebSocket notification due to invalid membership type.")) {
             handleInvalidMembershipTypeChallenge();
         }
+        // 监听因购物车触发的挑战
+        if (message.contains("Challenge triggered because user ID mismatch in cart.")) {
+            handleCartChallenge();
+        }
     }
 
     private void handleInvalidTokenChallenge() {
@@ -43,5 +44,9 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
 
     private void handleInvalidMembershipTypeChallenge() {
         ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by invalid membership type.");
+    }
+
+    private void handleCartChallenge() {
+        ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by user ID mismatch.");
     }
 }

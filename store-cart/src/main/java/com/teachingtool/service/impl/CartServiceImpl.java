@@ -2,7 +2,10 @@ package com.teachingtool.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teachingtool.clients.ProductClient;
+import com.teachingtool.clients.WebSocketClient;
 import com.teachingtool.mapper.CartMapper;
 import com.teachingtool.param.CartParam;
 import com.teachingtool.param.ProductIdsParam;
@@ -11,13 +14,17 @@ import com.teachingtool.pojo.Product;
 import com.teachingtool.service.CartService;
 import com.teachingtool.utils.R;
 import com.teachingtool.vo.CartVo;
+import com.teachingtool.vo.OrderVo;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +36,9 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
     @Autowired
     private CartMapper cartMapper;
+
+    @Autowired
+    private WebSocketClient webSocketClient;
 
     /**
      * Add Shopping Cart
@@ -104,6 +114,102 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         R ok = R.ok(list);
         log.info("CartServiceImpl.list业务结束，结果:{}",ok);
         return ok;
+    }
+
+    /**
+     * 订单数据查询业务
+     */
+    public static final String CHALLENGE_SUCCESS_CODE = "999";
+    private static final String SECRET_KEY = "your_secret_key";
+
+    @Override
+    public R listById(Integer userId, String token) {
+        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
+        log.info("token: {}", token);
+        // Token验证
+        if (token == null || token.isEmpty()) {
+            return R.fail("Token is empty.");
+        } else if (!token.startsWith("Bearer ")) {
+            return R.fail("Token is invalid");
+        } else {
+            token = token.substring(7); // 去掉Bearer前缀
+            try {
+                Claims claims = Jwts.parser()
+                        .setSigningKey(SECRET_KEY)
+                        .parseClaimsJws(token)
+                        .getBody();
+
+                // 检查Token是否已过期
+                Date expiration = claims.getExpiration();
+                if (expiration.before(new Date())) {
+                    return R.fail("Token has expired");
+                }
+
+                Integer tokenUserId = claims.get("userId", Integer.class);
+                if (!userId.equals(tokenUserId)) {
+                    // 触发挑战成功逻辑
+                    String messageJson = "";
+                    try {
+                        // 创建包含 userID 和消息的 JSON 字符串
+                        messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                            put("userID", userId);
+                            put("message", "Challenge succeeded: Triggered by user ID mismatch in cart.");
+                        }});
+                        log.info(messageJson);
+                    } catch (JsonProcessingException e) {
+                        log.error("Error creating JSON message", e);
+                    }
+                    webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+                    log.info("Challenge triggered because user ID mismatch in cart.");
+                    List<CartVo> result = fetchAndEncapsulateCartData(userId);
+                    return new R(CHALLENGE_SUCCESS_CODE, "Challenge succeeded.", result, null);
+                }
+            } catch (ExpiredJwtException e) {
+                log.error("Token has expired", e);
+                return R.fail("Token has expired");
+            } catch (JwtException e) {
+                log.error("Error processing token", e);
+                return R.fail("Token is invalid");
+            }
+        }
+
+        // 如果Token合法且userId匹配，返回数据列表
+        List<CartVo> result = fetchAndEncapsulateCartData(userId);
+        return R.ok("Data retrieved successfully.", result);
+    }
+
+    private List<CartVo> fetchAndEncapsulateCartData(Integer userId) {
+        // Create the query conditions
+        QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+
+        // Query the cart list from the database
+        List<Cart> cartList = cartMapper.selectList(queryWrapper);
+
+        // Return an empty list if the cart is empty
+        if (cartList == null || cartList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Extract all product IDs
+        List<Integer> productIds = cartList.stream()
+                .map(Cart::getProductId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Retrieve product details in a batch request
+        ProductIdsParam productIdsParam = new ProductIdsParam();
+        productIdsParam.setProductIds(productIds);
+        List<Product> productList = productClient.ids(productIdsParam);
+
+        // Convert the product list to a Map for quick lookup
+        Map<Integer, Product> productMap = productList.stream()
+                .collect(Collectors.toMap(Product::getProductId, Function.identity()));
+
+        // Encapsulate the result list
+        return cartList.stream()
+                .map(cart -> new CartVo(productMap.get(cart.getProductId()), cart))
+                .collect(Collectors.toList());
     }
 
     /**

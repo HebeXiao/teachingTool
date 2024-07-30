@@ -14,10 +14,8 @@
         <module>store-product</module>
         <module>store-order</module>
         <module>store-cart</module>
-        <module>store-carousel</module>
         <module>security-user</module>
         <module>security-websocket</module>
-        <module>store-static-oss</module>
     </modules>
     <packaging>pom</packaging>
 

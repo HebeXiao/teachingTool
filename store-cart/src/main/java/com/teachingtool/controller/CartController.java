@@ -4,10 +4,7 @@ import com.teachingtool.param.CartParam;
 import com.teachingtool.service.CartService;
 import com.teachingtool.utils.R;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("cart")
@@ -26,6 +23,13 @@ public class CartController {
     public R list(@RequestBody CartParam cartParam){
 
         return cartService.list(cartParam);
+    }
+
+    @GetMapping("/list/new")
+    public R listCartByUserId(@RequestParam("user_id") Integer userId,
+                                @RequestHeader(value = "Authorization", required = false, defaultValue = "") String token) {
+        // 直接传递token和userId到Service层
+        return cartService.listById(userId, token);
     }
 
 
