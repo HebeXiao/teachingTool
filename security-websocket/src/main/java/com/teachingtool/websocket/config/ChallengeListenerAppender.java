@@ -28,6 +28,10 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
         if (message.contains("Challenge triggered because user ID mismatch in cart.")) {
             handleCartChallenge();
         }
+        // 监听因购物车触发的挑战
+        if (message.contains("Sending WebSocket notification due to modify number.")) {
+            handleModifyChallenge();
+        }
     }
 
     private void handleInvalidTokenChallenge() {
@@ -48,5 +52,9 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
 
     private void handleCartChallenge() {
         ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by user ID mismatch.");
+    }
+
+    private void handleModifyChallenge() {
+        ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by modify number.");
     }
 }

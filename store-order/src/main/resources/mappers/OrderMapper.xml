@@ -6,4 +6,23 @@
     <select id="selectOrdersByOrderId" resultType="com.teachingtool.pojo.Order">
         SELECT * FROM orders WHERE order_id = #{orderId}
     </select>
+    <!-- 添加更新订单详细信息的方法 -->
+    <update id="updateOrderDetail" parameterType="com.teachingtool.vo.OrderDetailVo">
+        UPDATE orders
+        <set>
+            <if test="orderDetail.orderAddress != null">
+                order_address = #{orderDetail.orderAddress},
+            </if>
+            <if test="orderDetail.orderPhone != null">
+                order_phone = #{orderDetail.orderPhone},
+            </if>
+            <if test="orderDetail.orderName != null">
+                order_name = #{orderDetail.orderName},
+            </if>
+            <if test="orderDetail.productNum != null">
+                product_num = #{orderDetail.productNum},
+            </if>
+        </set>
+        WHERE order_id = #{orderDetail.orderId}
+    </update>
 </mapper>

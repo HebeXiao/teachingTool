@@ -298,5 +298,79 @@ public class OrderServiceImpl  extends ServiceImpl<OrderMapper, Order> implement
         return response;
     }
 
+    @Override
+    public Map<String, Object> updateOrderDetail(Long orderId, OrderDetailVo updatedOrderDetail) {
+        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
+        // 获取订单项
+        List<Order> orders = orderMapper.selectOrdersByOrderId(orderId);
+
+        String orderAddress = null;
+        String orderPhone = null;
+        String orderName = null;
+        Integer productNum = null;
+        for (Order order : orders) {
+            orderAddress = order.getOrderAddress();
+            orderPhone = order.getOrderPhone();
+            orderName = order.getOrderName();
+            productNum = order.getProductNum();
+        }
+
+        OrderDetailVo orderDetailVo = new OrderDetailVo();
+        // 更新订单汇总信息
+        orderDetailVo.setOrderId(orderId);
+
+        // 更新orderDetailVo的数据，如果updatedOrderDetail提供了新数据
+        if (updatedOrderDetail != null) {
+            if (updatedOrderDetail.getOrderAddress() != null) {
+                orderDetailVo.setOrderAddress(updatedOrderDetail.getOrderAddress());
+            } else {
+                orderDetailVo.setOrderAddress(orderAddress);
+            }
+
+            if (updatedOrderDetail.getOrderPhone() != null) {
+                orderDetailVo.setOrderPhone(updatedOrderDetail.getOrderPhone());
+            } else {
+                orderDetailVo.setOrderPhone(orderPhone);
+            }
+
+            if (updatedOrderDetail.getOrderName() != null) {
+                orderDetailVo.setOrderName(updatedOrderDetail.getOrderName());
+            } else {
+                orderDetailVo.setOrderName(orderName);
+            }
+
+            if (updatedOrderDetail.getProductNum() != null) {
+                orderDetailVo.setProductNum(updatedOrderDetail.getProductNum());
+                // 触发 WebSocket 逻辑
+                String messageJson = "";
+                try {
+                    // 创建包含 userID 和消息的 JSON 字符串
+                    messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
+                        put("message", "Challenge succeeded: Triggered by modify number.");
+                    }});
+                    log.info("Sending WebSocket notification due to modify number.");
+                    webSocketClient.notifyClients(messageJson); // 发送 JSON 格式的消息
+                } catch (JsonProcessingException e) {
+                    log.error("Error creating JSON message for modify number", e);
+                }
+            } else {
+                orderDetailVo.setProductNum(productNum);
+            }
+        }
+
+        // 将更新后的orderDetailVo保存到数据库（假设有相应的持久化方法）
+        orderMapper.updateOrderDetail(orderDetailVo);
+
+        // 封装响应数据
+        Map<String, Object> response = new HashMap<>();
+        response.put("orderDetailVo", orderDetailVo);
+        response.put("orders", orders);
+
+        // 打印返回数据
+        log.info("Updated Response: " + response);
+        return response;
+    }
+
+
 
 }

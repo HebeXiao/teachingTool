@@ -4,10 +4,12 @@ import com.teachingtool.order.service.OrderService;
 import com.teachingtool.param.OrderParam;
 import com.teachingtool.param.PageParam;
 import com.teachingtool.utils.R;
+import com.teachingtool.vo.OrderDetailVo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.SignatureException;
@@ -55,5 +57,14 @@ public class OrderController {
     @GetMapping("/order/detail")
     public Map<String, Object> orderDetail(@RequestParam("order_id") Long orderId) {
         return orderService.getOrderDetail(orderId);
+    }
+
+    // 更新订单详细信息
+    @PutMapping("/{orderId}")
+    public ResponseEntity<Map<String, Object>> updateOrderDetail(
+            @PathVariable Long orderId,
+            @RequestBody OrderDetailVo updatedOrderDetail) {
+        Map<String, Object> updatedDetail = orderService.updateOrderDetail(orderId, updatedOrderDetail);
+        return ResponseEntity.ok(updatedDetail);
     }
 }
