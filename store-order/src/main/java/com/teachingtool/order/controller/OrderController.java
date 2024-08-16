@@ -22,11 +22,6 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    /**
-     * 订单数据保存
-     * @param orderParam
-     * @return
-     */
     @PostMapping("save")
     public Object save(@RequestBody OrderParam orderParam){
         return orderService.save(orderParam);
@@ -35,15 +30,9 @@ public class OrderController {
     @GetMapping("/list")
     public R listOrdersByUserId(@RequestParam("user_id") Integer userId,
                                 @RequestHeader(value = "Authorization", required = false, defaultValue = "") String token) {
-        // 直接传递token和userId到Service层
         return orderService.list(userId, token);
     }
 
-    /**
-     * 检查订单是否包含要删除的商品
-     * @param productId
-     * @return
-     */
     @PostMapping("/check")
     public  Object check(@RequestBody Integer productId){
         return orderService.check(productId);
@@ -54,12 +43,6 @@ public class OrderController {
         return orderService.getOrderDetail(param.get("order_id"));
     }
 
-    @GetMapping("/order/detail")
-    public Map<String, Object> orderDetail(@RequestParam("order_id") Long orderId) {
-        return orderService.getOrderDetail(orderId);
-    }
-
-    // 更新订单详细信息
     @PutMapping("/{orderId}")
     public ResponseEntity<Map<String, Object>> updateOrderDetail(
             @PathVariable Long orderId,

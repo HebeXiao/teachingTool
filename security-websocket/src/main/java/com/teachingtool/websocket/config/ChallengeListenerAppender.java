@@ -6,29 +6,28 @@ import ch.qos.logback.core.AppenderBase;
 public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
     @Override
     protected void append(ILoggingEvent eventObject) {
-        String exceptionMessage = (eventObject.getThrowableProxy() != null) ? eventObject.getThrowableProxy().getMessage() : "";
         String message = eventObject.getFormattedMessage();
-        // 监听因 token 为空触发的挑战
+        // Listen for challenges triggered by a null token
         if (message.contains("Sending WebSocket notification due to empty token.")) {
             handleEmptyTokenChallenge();
         }
-        // 监听因用户 ID 不匹配触发的挑战
+        // Listening for challenges triggered by user ID mismatches
         if (message.contains("Challenge triggered because user ID mismatch.")) {
             handleInvalidTokenChallenge();
         }
-        // 监听因未经授权的人修改会员属性触发的挑战
+        // Listen to challenges triggered by unauthorized people modifying member attributes
         if (message.contains("Member attributes have been modified by unauthorized persons")) {
             handleUnauthorizedModificationChallenge();
         }
-        // 监听因无效的 membership 类型触发的挑战
+        // Listening for challenges triggered by invalid membership types
         if (message.contains("Sending WebSocket notification due to invalid membership type.")) {
             handleInvalidMembershipTypeChallenge();
         }
-        // 监听因购物车触发的挑战
+        // Listening to challenges triggered by shopping carts
         if (message.contains("Challenge triggered because user ID mismatch in cart.")) {
             handleCartChallenge();
         }
-        // 监听因购物车触发的挑战
+        // Listening to challenges due to modification of the number of products
         if (message.contains("Sending WebSocket notification due to modify number.")) {
             handleModifyChallenge();
         }
@@ -39,7 +38,7 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
     }
 
     private void handleEmptyTokenChallenge() {
-        ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by empty token.");
+        ChallengeWebSocketHandler.notifyClients("Challenge failed: Triggered by empty token.");
     }
 
     private void handleUnauthorizedModificationChallenge() {
@@ -47,7 +46,7 @@ public class ChallengeListenerAppender extends AppenderBase<ILoggingEvent> {
     }
 
     private void handleInvalidMembershipTypeChallenge() {
-        ChallengeWebSocketHandler.notifyClients("Challenge succeeded: Triggered by invalid membership type.");
+        ChallengeWebSocketHandler.notifyClients("Challenge failed: Triggered by invalid membership type.");
     }
 
     private void handleCartChallenge() {

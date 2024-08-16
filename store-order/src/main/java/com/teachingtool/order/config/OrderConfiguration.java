@@ -6,12 +6,6 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 @Configuration
 public class OrderConfiguration {
-
-
-    /**
-     * mq序列化方式，选择json！
-     * @return
-     */
     @Bean
     public MessageConverter messageConverter(){
 

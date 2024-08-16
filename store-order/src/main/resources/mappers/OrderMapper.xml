@@ -6,7 +6,6 @@
     <select id="selectOrdersByOrderId" resultType="com.teachingtool.pojo.Order">
         SELECT * FROM orders WHERE order_id = #{orderId}
     </select>
-    <!-- 添加更新订单详细信息的方法 -->
     <update id="updateOrderDetail" parameterType="com.teachingtool.vo.OrderDetailVo">
         UPDATE orders
         <set>

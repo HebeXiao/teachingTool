@@ -14,6 +14,6 @@ public class ChallengeParam implements Serializable {
 
     @JsonProperty("user_id")
     private Integer userId;
-    private boolean isCompleted; // 这个属性不会映射到数据库，仅用于逻辑处理;
+    private boolean isCompleted;
 
 }

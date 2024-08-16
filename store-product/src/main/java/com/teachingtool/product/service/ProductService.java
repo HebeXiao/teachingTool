@@ -11,8 +11,6 @@ public interface ProductService extends IService<Product> {
 
     List<Product> ids(ProductIdsParam productIdsParam);
 
-    Object byCategory(ProductParamInteger productParamInteger);
-
     Object all(ProductParamInteger productParamInteger);
 
     Object detail(Integer productID);

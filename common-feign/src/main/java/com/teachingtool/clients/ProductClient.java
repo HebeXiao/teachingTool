@@ -13,10 +13,6 @@ import java.util.List;
 @FeignClient(value = "product-service")
 public interface ProductClient {
 
-    /**
-     * 商品全部数据调用
-     * @return
-     */
     @GetMapping("/product/list")
     List<Product> list();
 

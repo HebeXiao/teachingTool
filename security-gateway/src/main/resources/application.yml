@@ -1,4 +1,4 @@
-# 配置网关 Port:3000
+# Configure Gateway Port:3000
 spring:
   cloud:
     gateway:

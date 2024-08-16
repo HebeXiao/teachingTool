@@ -1,5 +1,6 @@
 package com.teachingtool.order;
 
+import com.teachingtool.clients.CartClient;
 import com.teachingtool.clients.ProductClient;
 import com.teachingtool.clients.WebSocketClient;
 import org.mybatis.spring.annotation.MapperScan;
@@ -9,7 +10,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @MapperScan(basePackages = "com.teachingtool.order.mapper")
 @SpringBootApplication
-@EnableFeignClients(clients = {ProductClient.class, WebSocketClient.class})
+@EnableFeignClients(clients = {ProductClient.class, WebSocketClient.class, CartClient.class})
 public class OrderApplication {
 
     public static void main(String[] args) {

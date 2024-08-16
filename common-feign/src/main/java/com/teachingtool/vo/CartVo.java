@@ -13,14 +13,14 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class CartVo implements Serializable {
 
-    private Integer id;  //购物车id
-    private Integer productID;  //商品id
-    private String  productName; //商品名称
-    private String  productImg; //商品显示图片
-    private Double price;  //商城价格
-    private Integer num;  //商品购买数量
-    private Integer maxNum; //商品限购数量
-    private Boolean check = false; //是否勾选
+    private Integer id;
+    private Integer productID;
+    private String  productName;
+    private String  productImg;
+    private Double price;
+    private Integer num;
+    private Integer maxNum;
+    private Boolean check = false;
 
     public CartVo(Product product, Cart cart) {
         this.id = cart.getId();

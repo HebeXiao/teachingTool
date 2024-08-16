@@ -14,7 +14,6 @@ import com.teachingtool.pojo.Product;
 import com.teachingtool.service.CartService;
 import com.teachingtool.utils.R;
 import com.teachingtool.vo.CartVo;
-import com.teachingtool.vo.OrderVo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -53,16 +52,14 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         Product product = productList.get(0);
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id",cartParam.getUserId());
-        queryWrapper.eq("product_id",cartParam.getProductId());
+        queryWrapper.eq("user_id", cartParam.getUserId())
+                .eq("product_id", cartParam.getProductId());
         Cart cart = cartMapper.selectOne(queryWrapper);
         if (cart != null){
-            //If it's not the first time, just go back to Added!
+            // Product already in cart, increase quantity
             cart.setNum(cart.getNum()+1);
             cartMapper.updateById(cart);
-            R ok = R.ok("The item is already in the shopping cart, quantity +1!");
-            ok.setCode("002");
-            return ok;
+            return R.ok("The item is already in the shopping cart, add quantity!");
         }
 
         cart = new Cart();
@@ -72,7 +69,6 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         cartMapper.insert(cart);
 
         CartVo cartVo = new CartVo(product,cart);
-        log.info("CartServiceImpl.save operation ends, result:{}",cartVo);
         return R.ok(cartVo);
     }
 
@@ -81,76 +77,65 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
      */
     @Override
     public R list(CartParam cartParam) {
-        //获取用户id
         Integer userId = cartParam.getUserId();
-        //查询用户id对应的购物车数据
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id",userId);
         List<Cart> cartList = cartMapper.selectList(queryWrapper);
-        if (cartList == null || cartList.size() == 0){
-            return R.ok("No data for the shopping cart!",cartList);
+
+        if (cartList == null || cartList.isEmpty()) {
+            return R.ok("No data for the shopping cart!", Collections.emptyList());
         }
-        //封装商品集合,查询商品数据
-        List<Integer> ids = new ArrayList<>();
-        for (Cart cart : cartList) {
-            ids.add(cart.getProductId());
-        }
+
+        List<Integer> ids = cartList.stream()
+                .map(Cart::getProductId)
+                .collect(Collectors.toList());
 
         ProductIdsParam productIdsParam = new ProductIdsParam();
         productIdsParam.setProductIds(ids);
-
         List<Product> productList = productClient.ids(productIdsParam);
-        //集合转map!
-        Map<Integer, Product> map = productList.stream().collect(Collectors.
-                toMap(Product::getProductId, v -> v));
-        System.out.println("map = " + map);
-        //结果封装即可
-        List<CartVo> list = new ArrayList<>(cartList.size());
-        for (Cart cart : cartList) {
-            CartVo cartVo = new CartVo(map.get(cart.getProductId()),cart);
-            list.add(cartVo);
-        }
 
-        R ok = R.ok(list);
-        log.info("CartServiceImpl.list业务结束，结果:{}",ok);
-        return ok;
+        Map<Integer, Product> productMap = productList.stream()
+                .collect(Collectors.toMap(Product::getProductId, Function.identity()));
+
+        List<CartVo> resultList = cartList.stream()
+                .map(cart -> new CartVo(productMap.get(cart.getProductId()), cart))
+                .collect(Collectors.toList());
+
+        return R.ok(resultList);
     }
 
     /**
-     * 订单数据查询业务
+     * Order Data Inquiry Service
      */
     public static final String CHALLENGE_SUCCESS_CODE = "999";
     private static final String SECRET_KEY = "your_secret_key";
 
     @Override
     public R listById(Integer userId, String token) {
-        ObjectMapper mapper = new ObjectMapper(); // JSON 处理器
-        log.info("token: {}", token);
-        // Token验证
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Token verification
         if (token == null || token.isEmpty()) {
             return R.fail("Token is empty.");
         } else if (!token.startsWith("Bearer ")) {
             return R.fail("Token is invalid");
         } else {
-            token = token.substring(7); // 去掉Bearer前缀
+            token = token.substring(7); // Remove the Bearer prefix.
             try {
                 Claims claims = Jwts.parser()
                         .setSigningKey(SECRET_KEY)
                         .parseClaimsJws(token)
                         .getBody();
 
-                // 检查Token是否已过期
-                Date expiration = claims.getExpiration();
-                if (expiration.before(new Date())) {
+                // Check if the Token has expired
+                if (claims.getExpiration().before(new Date())) {
                     return R.fail("Token has expired");
                 }
 
                 Integer tokenUserId = claims.get("userId", Integer.class);
                 if (!userId.equals(tokenUserId)) {
-                    // 触发挑战成功逻辑
                     String messageJson = "";
                     try {
-                        // 创建包含 userID 和消息的 JSON 字符串
                         messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
                             put("userID", userId);
                             put("message", "Challenge succeeded: Triggered by user ID mismatch in cart.");
@@ -173,17 +158,14 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             }
         }
 
-        // 如果Token合法且userId匹配，返回数据列表
+        // If the Token is legal and the userId matches, return the list of data.
         List<CartVo> result = fetchAndEncapsulateCartData(userId);
         return R.ok("Data retrieved successfully.", result);
     }
 
     private List<CartVo> fetchAndEncapsulateCartData(Integer userId) {
-        // Create the query conditions
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId);
-
-        // Query the cart list from the database
         List<Cart> cartList = cartMapper.selectList(queryWrapper);
 
         // Return an empty list if the cart is empty
@@ -201,8 +183,6 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         ProductIdsParam productIdsParam = new ProductIdsParam();
         productIdsParam.setProductIds(productIds);
         List<Product> productList = productClient.ids(productIdsParam);
-
-        // Convert the product list to a Map for quick lookup
         Map<Integer, Product> productMap = productList.stream()
                 .collect(Collectors.toMap(Product::getProductId, Function.identity()));
 
@@ -213,55 +193,40 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     }
 
     /**
-     * 修改购物车数量
-     *
-     * @param cartParam
-     * @return
+     * Modify Shopping Cart Quantity
      */
     @Override
     public R update(CartParam cartParam) {
-
-        //1.查询商品对应的详情
-        List<Integer> ids = new ArrayList<>();
-        ids.add(cartParam.getProductId());
-        ProductIdsParam productIdsParam = new ProductIdsParam();
-        productIdsParam.setProductIds(ids);
-
-        //3.数据修改
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id",cartParam.getUserId());
-        queryWrapper.eq("product_id",cartParam.getProductId());
+        queryWrapper.eq("user_id", cartParam.getUserId())
+                .eq("product_id", cartParam.getProductId());
+
         Cart cart = cartMapper.selectOne(queryWrapper);
+
         cart.setNum(cartParam.getNum());
         cartMapper.updateById(cart);
 
-        //4.结果封装
-        R ok = R.ok("Shopping cart items updated successfully!");
-        log.info("CartServiceImpl.update业务结束，结果:{}",ok);
-        return ok;
+        return R.ok("Shopping cart items updated successfully!");
     }
 
+
     /**
-     * 移除购物车数据
+     * Remove Shopping Cart Data
      */
     @Override
     public R remove(CartParam cartParam) {
-
-        //删除参数封装
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id",cartParam.getUserId());
         queryWrapper.eq("product_id",cartParam.getProductId());
-        //删除数据
         cartMapper.delete(queryWrapper);
         return R.ok("Delete items successfully!");
     }
 
     /**
-     * 检查商品是否存在
+     * Check for the presence of goods
      */
     @Override
     public R check(Integer productId) {
-
         QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("product_id",productId);
         Long total = cartMapper.selectCount(queryWrapper);

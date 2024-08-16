@@ -36,29 +36,20 @@ public class UserServiceImpl implements UserService {
     private WebSocketClient webSocketClient;
 
     /**
-     * 检查账号是否可用
-     *
-     * @param userName
-     * @return
+     * Check if the account is available
      */
     @Override
     public R check(String userName) {
 
-        //1.账号非空校验
         if (StringUtils.isEmpty(userName)){
-            log.info("UserServiceImpl.check业务开始，参数:{}",userName);
             return R.fail("Account is null, not available!");
         }
-        //2.数据库查询
+
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq("user_name",userName);
         Long count = userMapper.selectCount(queryWrapper);
 
-        //3.结果处理
-        log.info("UserServiceImpl.check业务结束，结果:{}",count);
-
         if (count > 0 ){
-
             return R.fail("Account already exists, unavailable!");
         }
 
@@ -66,41 +57,29 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 进行账号注册
-     *
-     * @param user 参数没有校验
-     * @return
+     * Register for an account
      */
     @Override
     public R register(User user) {
 
-        //1.参数校验
         if (StringUtils.isEmpty(user.getUserName()) || StringUtils.isEmpty(user.getPassword()))
         {
-            log.info("UserServiceImpl.register业务结束，结果:{}",user);
             return R.fail("Username or password is null, registration failed!");
         }
-        //2.数据库查询
+
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq("user_name",user.getUserName());
         Long count = userMapper.selectCount(queryWrapper);
 
         if (count>0) {
-            log.info("UserServiceImpl.register业务结束，结果:{}",count);
             return R.fail("Username already exists, unavailable!");
         }
-        //3.数据库插入
 
-        //代码加密处理,注意加盐,生成常量
         String newPwd = MD5Util.encode(user.getPassword() + UserConstants.USER_SLAT);
-
         user.setPassword(newPwd);
         user.setMembership(false);
-
         int rows = userMapper.insert(user);
-        //4.结果处理
         if (rows > 0){
-            log.info("UserServiceImpl.register业务结束，注册成功,结果:{}",rows);
             return R.ok("Registration Successful!");
         }
 
@@ -108,15 +87,11 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 进行账号登录
-     *
-     * @param user
-     * @return
+     * Make an account login
      */
     @Override
     public R login(User user) {
         if (StringUtils.isEmpty(user.getUserName()) || StringUtils.isEmpty(user.getPassword())) {
-            log.info("UserServiceImpl.login业务结束，结果:{}", user);
             return R.fail("Username or password is null, login failed!");
         }
 
@@ -130,22 +105,16 @@ public class UserServiceImpl implements UserService {
         User loginUser = userMapper.selectOne(queryWrapper);
 
         if (loginUser == null) {
-            log.info("UserServiceImpl.login业务结束，登录失败,结果:{}", loginUser);
             return R.fail("Wrong username or password, login failed!");
         }
 
-        // 生成JWT token
+        // Generate JWT token
         String token = generateToken(loginUser);
-
-        // 设置为null,配合NoN_NULL注解,不返回给前端
         loginUser.setPassword(null);
-
-        // 将 token 和 user 信息放入 Map 中
         Map<String, Object> resultData = new HashMap<>();
         resultData.put("token", token);
         resultData.put("user", loginUser);
 
-        log.info("UserServiceImpl.login业务结束，登录成功,结果:{}", loginUser);
         return R.ok("Login Successful!", resultData);
     }
 
@@ -187,12 +156,11 @@ public class UserServiceImpl implements UserService {
             if (membershipObj instanceof Boolean) {
                 newMembership = (Boolean) membershipObj;
             } else {
-                // 触发WebSocket，提示类型有问题
                 String messageJson = "";
                 try {
                     messageJson = mapper.writeValueAsString(new HashMap<String, Object>() {{
                         put("userID", userId);
-                        put("message", "Challenge succeeded: Triggered by invalid membership type.");
+                        put("message", "Challenge failed: Triggered by invalid membership type.");
                     }});
                     log.info("Sending WebSocket notification due to invalid membership type.");
                     webSocketClient.notifyClients(messageJson);
@@ -203,8 +171,7 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        boolean isUpdated = false;  // 标志是否有更新发生
-
+        boolean isUpdated = false;
         if (newPhoneNumber != null && !newPhoneNumber.equals(user.getUserPhonenumber())) {
             user.setUserPhonenumber(newPhoneNumber);
             isUpdated = true;
@@ -237,7 +204,7 @@ public class UserServiceImpl implements UserService {
         if (isUpdated) {
             int updatedRows = userMapper.updateById(user);
             if (updatedRows > 0) {
-                // 在返回之前清除密码字段
+                // Clear the password field before returning
                 user.setPassword(null);
                 return user;
             }
@@ -245,10 +212,6 @@ public class UserServiceImpl implements UserService {
 
         return null;
     }
-
-
-
-
 
     @Override
     public Map<String, Object> getUserAddress(Map<String, Integer> request) {

@@ -7,4 +7,4 @@ spring:
     password: guest
     listener:
       simple:
-        prefetch: 1   # 预先分配1个 能者多劳
+        prefetch: 1   # 1 pre-allocated

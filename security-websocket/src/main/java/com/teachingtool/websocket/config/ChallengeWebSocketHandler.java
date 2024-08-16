@@ -33,11 +33,11 @@ public class ChallengeWebSocketHandler extends TextWebSocketHandler {
                     session.sendMessage(new TextMessage(message));
                 } else {
                     log.warn("WebSocket session {} is closed, removing from sessions", session.getId());
-                    sessions.remove(session); // 移除已关闭的会话
+                    sessions.remove(session); // Remove closed sessions
                 }
             } catch (IOException e) {
                 log.error("Failed to send message to WebSocket session {}: {}", session.getId(), e.getMessage());
-                sessions.remove(session); // 如果发送消息失败，也移除该会话
+                sessions.remove(session); // If sending a message fails, also remove the session
             }
         }
     }

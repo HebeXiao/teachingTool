@@ -15,47 +15,34 @@ public class CartController {
 
     @PostMapping("save")
     public R save(@RequestBody CartParam cartParam){
-
         return cartService.save(cartParam);
     }
 
     @PostMapping("list")
     public R list(@RequestBody CartParam cartParam){
-
         return cartService.list(cartParam);
     }
 
     @GetMapping("/list/new")
     public R listCartByUserId(@RequestParam("user_id") Integer userId,
                                 @RequestHeader(value = "Authorization", required = false, defaultValue = "") String token) {
-        // 直接传递token和userId到Service层
         return cartService.listById(userId, token);
     }
 
 
     @PostMapping("update")
     public R update(@RequestBody CartParam cartParam){
-
         return cartService.update(cartParam);
     }
 
 
     @PostMapping("remove")
     public R remove(@RequestBody CartParam cartParam){
-
         return cartService.remove(cartParam);
     }
 
-
-    /**
-     * 检查是否存在对应商品
-     * @param productId
-     * @return
-     */
     @PostMapping("check")
     public R check(@RequestBody Integer productId){
-
         return cartService.check(productId);
     }
-
 }

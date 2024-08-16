@@ -15,15 +15,15 @@ public class R  implements Serializable {
     public static final Long serialVersionUID = 1L;
 
     /**
-     * 通用成功状态码
+     * Generic Success Status Code
      */
     public static final String SUCCESS_CODE = "001";
     /**
-     * 失败状态码
+     * Failure status code
      */
     public static final String FAIL_CODE = "004";
     /**
-     * 未登录
+     * Not logged in
      */
     public static final String USER_NO_LOGIN = "401";
 
@@ -36,90 +36,51 @@ public class R  implements Serializable {
     private Long   total;
 
     /**
-     * 成功
-     * @param msg
-     * @param data
-     * @return
+     * Success
      */
     public static R ok(String msg,Object data,Long total){
-
         return new R(SUCCESS_CODE,msg,data,total);
     }
 
     /**
-     * 成功
-     * @param data
-     * @return
+     * Success
      */
     public static R ok(String msg,Object data){
-
         return ok(msg,data,null);
     }
 
     /**
-     * 成功
-     * @return
+     * Success
      */
     public static R ok(String msg){
-
         return ok(msg,null);
     }
 
     /**
-     * 成功
-     * @return
+     * Success
      */
     public static R ok(Object data){
-
         return ok(null,data);
     }
 
     /**
-     * 失败
-     * @param msg
-     * @param data
-     * @return
+     * failure
      */
     public static R fail(String msg,Object data,Long total){
-
         return new R(FAIL_CODE,msg,data,total);
     }
 
     /**
-     * 失败
-     * @param data
-     * @return
+     * failure
      */
     public static R fail(String msg,Object data){
-
         return fail(msg,data,null);
     }
 
     /**
-     * 失败
-     * @return
+     * failure
      */
     public static R fail(String msg){
-
         return fail(msg,null);
     }
-
-    /**
-     * 失败
-     * @return
-     */
-    public static R fail(Object data){
-
-        return fail(null,data);
-    }
-
-    /**
-     * 未登录
-     * @return
-     */
-    public static R NO_LOGIN(){
-
-        return fail(USER_NO_LOGIN,"用户未登录!");
-    }
-
 }

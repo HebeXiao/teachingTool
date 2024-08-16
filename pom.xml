@@ -40,12 +40,9 @@
         <elasticsearch.version>7.12.1</elasticsearch.version>
     </properties>
 
-
-    <!-- spring cloud 和 spring cloud alibaba 和 mybatis 相关依赖管理-->
     <dependencyManagement>
 
         <dependencies>
-            <!-- springCloud -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -53,7 +50,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!--nacos的管理依赖-->
             <dependency>
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
@@ -61,13 +57,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- mysql驱动 -->
             <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>${mysql.version}</version>
             </dependency>
-            <!--mybatis-->
             <dependency>
                 <groupId>org.mybatis.spring.boot</groupId>
                 <artifactId>mybatis-spring-boot-starter</artifactId>
@@ -95,7 +89,6 @@
         </dependencies>
 
     </dependencyManagement>
-    <!-- lombok通用依赖引入 -->
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
